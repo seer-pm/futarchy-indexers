@@ -1,0 +1,89 @@
+type WhitelistedToken @entity {
+  id: ID! # Token Address
+  symbol: String
+  decimals: BigInt # Decimals fetched from contract
+  role: String! # "BASE" or "QUOTE"
+  proposal: Proposal # Address of the proposal that created this token
+}
+
+type Proposal @entity {
+  id: ID! # Proposal Address
+  marketName: String # Fetched from contract
+  
+  # Underlying Tokens
+  companyToken: WhitelistedToken!
+  currencyToken: WhitelistedToken!
+
+  pools: [Pool!]! @derivedFrom(field: "proposal")
+  
+  # Stored array allows Many-to-Many (One token can be in multiple proposals)
+  outcomeTokens: [WhitelistedToken!]!
+}
+
+type Pool @entity {
+  id: ID!
+  token0: WhitelistedToken!
+  token1: WhitelistedToken!
+  fee: BigInt!
+  liquidity: BigInt!
+  sqrtPrice: BigInt!
+  price: BigDecimal! # Formatted, decimal-adjusted, inverted if needed
+  tick: BigInt!
+  
+  # Normalization Flags
+  isInverted: Boolean!
+  
+  # Metadata
+  name: String!
+  type: String! # "STANDARD", "CONDITIONAL", "PREDICTION"
+  outcomeSide: String # "YES", "NO"
+
+  # Volume
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+
+
+  # Relations
+  candles: [Candle!]! @derivedFrom(field: "pool")
+  proposal: Proposal # The proposal this pool belongs to
+}
+
+type Candle @entity {
+  id: ID!
+  time: BigInt!
+  period: BigInt!
+  periodStartUnix: BigInt!
+  pool: Pool!
+  block: BigInt!
+  
+  open: BigDecimal!
+  high: BigDecimal!
+  low: BigDecimal!
+  close: BigDecimal!
+  
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  volumeUSD: BigDecimal!
+}
+
+type Swap @entity {
+  id: ID!
+  transactionHash: Bytes!
+  timestamp: BigInt!
+  pool: Pool!
+  sender: Bytes!
+  recipient: Bytes!
+  origin: Bytes! # User Wallet (tx.from)
+  
+  # Raw
+  amount0: BigDecimal!
+  amount1: BigDecimal!
+  
+  # Derived/User-Centric
+  amountIn: BigDecimal!
+  amountOut: BigDecimal!
+  tokenIn: WhitelistedToken!
+  tokenOut: WhitelistedToken!
+  
+  price: BigDecimal!
+}
