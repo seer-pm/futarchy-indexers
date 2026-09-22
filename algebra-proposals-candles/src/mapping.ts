@@ -247,6 +247,8 @@ export function handlePoolCreated(event: PoolCreated): void {
 }
 
 // Handle Initialize event - captures initial pool price before any swaps
+const CANDLE_PERIODS: i32[] = [60, 300, 900, 3600, 14400, 86400]
+
 export function handleInitialize(event: InitializeEvent): void {
     let poolId = event.address.toHexString()
     let pool = Pool.load(poolId)
@@ -294,10 +296,29 @@ export function handleInitialize(event: InitializeEvent): void {
     pool.price = priceUser
     pool.save()
 
+    // SEED CANDLES
+    // Candles were only ever written from handleSwap, so a pool that has been
+    // initialized but never traded had a price and no candles at all — every
+    // chart reading candles rendered empty until the first swap. Futarchy
+    // pools are sparse (~2 swaps/day), so that window is long and visible.
+    // Zero volume: no trade has happened, only a starting price.
+    if (priceUser.gt(BigDecimal.zero())) {
+        for (let i = 0; i < CANDLE_PERIODS.length; i++) {
+            updateCandle(
+                poolId,
+                event.block.timestamp,
+                priceUser,
+                event.block.number,
+                CANDLE_PERIODS[i],
+                BigDecimal.zero(),
+                BigDecimal.zero()
+            )
+        }
+    }
+
     log.info("Pool {} Initialized with price: {}", [poolId, priceUser.toString()])
 }
 
-const CANDLE_PERIODS: i32[] = [60, 300, 900, 3600, 14400, 86400]
 
 export function handleSwap(event: SwapEvent): void {
     let poolId = event.address.toHexString()

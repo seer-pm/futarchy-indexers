@@ -18,15 +18,15 @@ dataSources:
         - Proposal
       abis:
         - name: FutarchyFactory
-          file: FutarchyFactory\abis\FutarchyFactory.json
+          file: FutarchyFactory/FutarchyFactory.json
         - name: FutarchyProposal
-          file: FutarchyFactory\abis\FutarchyProposal.json
+          file: FutarchyFactory/FutarchyProposal.json
         - name: ERC20
-          file: FutarchyFactory\abis\ERC20.json
+          file: FutarchyFactory/ERC20.json
       eventHandlers:
         - event: NewProposal(indexed address,string,bytes32,bytes32)
           handler: handleNewProposal
-      file: FutarchyFactory\FutarchyFactory.wasm
+      file: FutarchyFactory/FutarchyFactory.wasm
   - kind: ethereum
     name: AlgebraFactory
     network: gnosis
@@ -42,15 +42,15 @@ dataSources:
         - Pool
       abis:
         - name: AlgebraFactory
-          file: AlgebraFactory\abis\AlgebraFactory.json
+          file: AlgebraFactory/AlgebraFactory.json
         - name: ERC20
-          file: AlgebraFactory\abis\ERC20.json
+          file: AlgebraFactory/ERC20.json
         - name: AlgebraPool
-          file: AlgebraFactory\abis\AlgebraPool.json
+          file: AlgebraFactory/AlgebraPool.json
       eventHandlers:
         - event: Pool(indexed address,indexed address,address)
           handler: handlePoolCreated
-      file: FutarchyFactory\FutarchyFactory.wasm
+      file: FutarchyFactory/FutarchyFactory.wasm
 templates:
   - kind: ethereum/contract
     name: AlgebraPool
@@ -67,7 +67,7 @@ templates:
         - Swap
       abis:
         - name: AlgebraPool
-          file: AlgebraPool\abis\AlgebraPool.json
+          file: AlgebraPool/AlgebraPool.json
       eventHandlers:
         - event: Initialize(uint160,int24)
           handler: handleInitialize
@@ -77,4 +77,4 @@ templates:
           handler: handleMint
         - event: Burn(indexed address,indexed int24,indexed int24,uint128,uint256,uint256)
           handler: handleBurn
-      file: FutarchyFactory\FutarchyFactory.wasm
+      file: FutarchyFactory/FutarchyFactory.wasm
