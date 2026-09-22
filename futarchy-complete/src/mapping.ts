@@ -2,9 +2,9 @@ import { Address, Bytes, BigInt, log, json, JSONValueKind } from "@graphprotocol
 import { AggregatorMetadataCreated } from "../generated/Creator/Creator"
 import { OrganizationMetadataCreated } from "../generated/OrganizationFactory/OrganizationFactory"
 import { ProposalMetadataCreated } from "../generated/ProposalMetadataFactory/ProposalMetadataFactory"
-import { OrganizationAdded, OrganizationCreatedAndAdded, ExtendedMetadataUpdated as AggregatorExtendedMetadataUpdated, EditorSet as AggregatorEditorSet, EditorRevoked as AggregatorEditorRevoked, OrganizationRemoved } from "../generated/templates/AggregatorTemplate/Aggregator"
-import { ProposalAdded, ProposalCreatedAndAdded, ExtendedMetadataUpdated as OrganizationExtendedMetadataUpdated, EditorSet as OrganizationEditorSet, EditorRevoked as OrganizationEditorRevoked, ProposalRemoved } from "../generated/templates/OrganizationTemplate/Organization"
-import { MetadataUpdated, Proposal as MetadataContract, ExtendedMetadataUpdated as ProposalExtendedMetadataUpdated } from "../generated/templates/ProposalTemplate/Proposal"
+import { OrganizationAdded, OrganizationCreatedAndAdded, ExtendedMetadataUpdated as AggregatorExtendedMetadataUpdated, EditorSet as AggregatorEditorSet, EditorRevoked as AggregatorEditorRevoked, OrganizationRemoved, AggregatorInfoUpdated, OwnershipTransferred as AggregatorOwnershipTransferred } from "../generated/templates/AggregatorTemplate/Aggregator"
+import { ProposalAdded, ProposalCreatedAndAdded, ExtendedMetadataUpdated as OrganizationExtendedMetadataUpdated, EditorSet as OrganizationEditorSet, EditorRevoked as OrganizationEditorRevoked, ProposalRemoved, CompanyInfoUpdated, OrganizationInfoUpdated, OwnershipTransferred as OrganizationOwnershipTransferred } from "../generated/templates/OrganizationTemplate/Organization"
+import { MetadataUpdated, Proposal as MetadataContract, ExtendedMetadataUpdated as ProposalExtendedMetadataUpdated, OwnershipTransferred as ProposalOwnershipTransferred } from "../generated/templates/ProposalTemplate/Proposal"
 
 import {
     ProposalEntity,
@@ -413,5 +413,66 @@ function updateMetadataEntries(parentId: string, parentType: string, metadata: s
         }
 
         entry.save()
+    }
+}
+
+// ============================================
+// INFO + OWNERSHIP HANDLERS
+// Name/description edits and owner transfers were never wired up, so those
+// three fields kept whatever value they had at creation time. The entities
+// already carried them, which is why the staleness was invisible.
+// ============================================
+
+export function handleAggregatorInfoUpdated(event: AggregatorInfoUpdated): void {
+    let entity = Aggregator.load(event.address.toHexString())
+    if (entity != null) {
+        entity.name = event.params.newName
+        entity.description = event.params.newDescription
+        entity.save()
+    }
+}
+
+export function handleAggregatorOwnershipTransferred(event: AggregatorOwnershipTransferred): void {
+    let entity = Aggregator.load(event.address.toHexString())
+    if (entity != null) {
+        entity.owner = event.params.newOwner
+        entity.save()
+    }
+}
+
+// The org "info changed" event was renamed CompanyInfoUpdated ->
+// OrganizationInfoUpdated across contract versions. Different names hash to
+// different topics, so both are indexed and share this body; whichever the
+// deployed org emits wins, and the other simply never fires.
+function applyOrganizationInfo(orgAddress: string, newName: string, newDescription: string): void {
+    let entity = Organization.load(orgAddress)
+    if (entity != null) {
+        entity.name = newName
+        entity.description = newDescription
+        entity.save()
+    }
+}
+
+export function handleCompanyInfoUpdated(event: CompanyInfoUpdated): void {
+    applyOrganizationInfo(event.address.toHexString(), event.params.newName, event.params.newDescription)
+}
+
+export function handleOrganizationInfoUpdated(event: OrganizationInfoUpdated): void {
+    applyOrganizationInfo(event.address.toHexString(), event.params.newName, event.params.newDescription)
+}
+
+export function handleOrganizationOwnershipTransferred(event: OrganizationOwnershipTransferred): void {
+    let entity = Organization.load(event.address.toHexString())
+    if (entity != null) {
+        entity.owner = event.params.newOwner
+        entity.save()
+    }
+}
+
+export function handleProposalOwnershipTransferred(event: ProposalOwnershipTransferred): void {
+    let entity = ProposalEntity.load(event.address.toHexString())
+    if (entity != null) {
+        entity.owner = event.params.newOwner
+        entity.save()
     }
 }

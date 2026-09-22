@@ -106,6 +106,10 @@ templates:
           handler: handleAggregatorEditorRevoked
         - event: OrganizationRemoved(indexed address)
           handler: handleOrganizationRemoved
+        - event: AggregatorInfoUpdated(string,string)
+          handler: handleAggregatorInfoUpdated
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleAggregatorOwnershipTransferred
       file: ./src/mapping.ts
 
   - kind: ethereum/contract
@@ -136,6 +140,12 @@ templates:
           handler: handleOrganizationEditorRevoked
         - event: ProposalRemoved(indexed address)
           handler: handleProposalRemoved
+        - event: CompanyInfoUpdated(string,string)
+          handler: handleCompanyInfoUpdated
+        - event: OrganizationInfoUpdated(string,string)
+          handler: handleOrganizationInfoUpdated
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOrganizationOwnershipTransferred
       file: ./src/mapping.ts
 
   - kind: ethereum/contract
@@ -157,4 +167,6 @@ templates:
           handler: handleProposalMetadataUpdated
         - event: ExtendedMetadataUpdated(string,string)
           handler: handleProposalExtendedMetadataUpdated
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleProposalOwnershipTransferred
       file: ./src/mapping.ts
