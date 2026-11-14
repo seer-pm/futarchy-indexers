@@ -9,6 +9,7 @@ A The Graph subgraph for indexing Futarchy Algebra pools, proposals, candles, an
 *   **Proposals**: Groups pools by their governance proposal or market question.
 *   **Spot Price**: Real-time `pool.price` calculated server-side (handling decimals & inversion).
 *   **Outcome Classification**: `outcomeSide` ("YES"/"NO") for easy UI filtering.
+*   **Categorical Proposals**: proposals from `FutarchyCategoricalFactory` (N answers plus INVALID) list their answers in `proposal.outcomes`; their tokens have role `ANSWER_COMPANY` / `ANSWER_CURRENCY` and their pools `outcomeIndex` (the answer) instead of `outcomeSide`. INVALID tokens have no pools and are not indexed.
 *   **Candles**: OHLCV data for multiple timeframes (1m, 5m, 15m, 1h, 4h, 1d).
 *   **Swaps**: Full trade history with human-readable amounts.
 

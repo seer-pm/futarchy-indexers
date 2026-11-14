@@ -1,5 +1,6 @@
 import { BigInt, Address, BigDecimal, log } from "@graphprotocol/graph-ts"
 import { NewProposal } from "../generated/FutarchyFactory/FutarchyFactory"
+import { NewProposal as NewCategoricalProposal } from "../generated/FutarchyCategoricalFactory/FutarchyFactory"
 import { PoolCreated } from "../generated/UniswapV3Factory/UniswapV3Factory"
 import {
     Swap as SwapEvent,
@@ -18,6 +19,9 @@ export const ROLE_NO_COMPANY = "NO_COMPANY"
 export const ROLE_YES_CURRENCY = "YES_CURRENCY"
 export const ROLE_NO_CURRENCY = "NO_CURRENCY"
 export const ROLE_COLLATERAL = "COLLATERAL"
+// Outcome tokens of a categorical proposal, one pair per answer (outcomeIndex)
+export const ROLE_ANSWER_COMPANY = "ANSWER_COMPANY"
+export const ROLE_ANSWER_CURRENCY = "ANSWER_CURRENCY"
 
 // Pool Types
 export const TYPE_EXPECTED_VALUE = "EXPECTED_VALUE"
@@ -30,9 +34,62 @@ export function handleNewProposal(event: NewProposal): void {
     let proposalAddress = event.params.proposal
     let proposal = FutarchyProposal.bind(proposalAddress)
 
-    // 1. Register Collaterals
-    // Collateral 1 is usually Company Token - we might treat it generic or specific if needed. 
-    // For now, let's just log it but the pools usually pair against Collat 2.
+    // Register Outcome Tokens
+    let roles = [ROLE_YES_COMPANY, ROLE_NO_COMPANY, ROLE_YES_CURRENCY, ROLE_NO_CURRENCY]
+    let outcomeTokenIds: string[] = []
+
+    for (let i = 0; i < 4; i++) {
+        let res = proposal.try_wrappedOutcome(BigInt.fromI32(i))
+        if (!res.reverted) {
+            // Get the address (this is the token itself)
+            let tokenAddress = res.value.getWrapped1155()
+            saveToken(tokenAddress, roles[i], proposalAddress)
+            outcomeTokenIds.push(tokenAddress.toHexString())
+        }
+    }
+
+    saveProposal(proposal, proposalAddress, outcomeTokenIds, null)
+}
+
+// A FutarchyCategoricalFactory proposal: N answers plus INVALID.
+// wrappedOutcome(i) is answer i of the company token and wrappedOutcome(N + i)
+// answer i of the currency token. 2N and 2N + 1 are INVALID, which has no
+// pools, so they are not whitelisted.
+export function handleNewCategoricalProposal(event: NewCategoricalProposal): void {
+    let proposalAddress = event.params.proposal
+    let proposal = FutarchyProposal.bind(proposalAddress)
+
+    let numOutcomes = proposal.try_numOutcomes()
+    if (numOutcomes.reverted) {
+        log.warning("Categorical proposal {} has no numOutcomes()", [proposalAddress.toHexString()])
+        return
+    }
+    let n = numOutcomes.value.toI32()
+
+    let outcomes: string[] = []
+    let companyTokenIds: string[] = []
+    let currencyTokenIds: string[] = []
+    for (let i = 0; i < n; i++) {
+        let label = proposal.try_outcomes(BigInt.fromI32(i))
+        outcomes.push(label.reverted ? "" : label.value)
+
+        let company = proposal.try_wrappedOutcome(BigInt.fromI32(i))
+        if (!company.reverted) {
+            saveToken(company.value.getWrapped1155(), ROLE_ANSWER_COMPANY, proposalAddress, i)
+            companyTokenIds.push(company.value.getWrapped1155().toHexString())
+        }
+        let currency = proposal.try_wrappedOutcome(BigInt.fromI32(n + i))
+        if (!currency.reverted) {
+            saveToken(currency.value.getWrapped1155(), ROLE_ANSWER_CURRENCY, proposalAddress, i)
+            currencyTokenIds.push(currency.value.getWrapped1155().toHexString())
+        }
+    }
+
+    saveProposal(proposal, proposalAddress, companyTokenIds.concat(currencyTokenIds), outcomes)
+}
+
+// Registers the collaterals and saves the Proposal entity.
+function saveProposal(proposal: FutarchyProposal, proposalAddress: Address, outcomeTokenIds: string[], outcomes: string[] | null): void {
     // Collateral 1 is Company Token
     let collateral1 = proposal.try_collateralToken1()
     let companyTokenHex: string | null = null
@@ -49,21 +106,6 @@ export function handleNewProposal(event: NewProposal): void {
         currencyTokenHex = collateral2.value.toHexString()
     }
 
-    // 2. Register Outcome Tokens
-    let roles = [ROLE_YES_COMPANY, ROLE_NO_COMPANY, ROLE_YES_CURRENCY, ROLE_NO_CURRENCY]
-    let outcomeTokenIds: string[] = []
-
-    for (let i = 0; i < 4; i++) {
-        let res = proposal.try_wrappedOutcome(BigInt.fromI32(i))
-        if (!res.reverted) {
-            // Get the address (this is the token itself)
-            let tokenAddress = res.value.getWrapped1155()
-            saveToken(tokenAddress, roles[i], proposalAddress)
-            outcomeTokenIds.push(tokenAddress.toHexString())
-        }
-    }
-
-    // 3. Create Proposal Entity
     let p = new Proposal(proposalAddress.toHexString())
 
     let mName = proposal.try_marketName()
@@ -79,19 +121,40 @@ export function handleNewProposal(event: NewProposal): void {
 
     // Save Outcomes Array (Many-to-Many support)
     p.outcomeTokens = outcomeTokenIds
+    if (outcomes) p.outcomes = outcomes
 
     p.save()
 }
 
+function isCompanyOutcome(role: string): boolean {
+    return role == ROLE_YES_COMPANY || role == ROLE_NO_COMPANY || role == ROLE_ANSWER_COMPANY
+}
 
+function isCurrencyOutcome(role: string): boolean {
+    return role == ROLE_YES_CURRENCY || role == ROLE_NO_CURRENCY || role == ROLE_ANSWER_CURRENCY
+}
 
-function saveToken(address: Address, role: string, proposal: Address | null): void {
+function isAnswer(token: WhitelistedToken): boolean {
+    return token.role == ROLE_ANSWER_COMPANY || token.role == ROLE_ANSWER_CURRENCY
+}
+
+// Whether two outcome tokens can make a conditional pool: YES/NO tokens pair
+// as before, and an answer's tokens only with the same answer of the same
+// proposal.
+function sameOutcome(a: WhitelistedToken, b: WhitelistedToken): boolean {
+    if (!isAnswer(a) && !isAnswer(b)) return true
+    return isAnswer(a) && isAnswer(b) && a.proposal == b.proposal && a.outcomeIndex == b.outcomeIndex
+}
+
+// outcomeIndex is the answer of a categorical proposal's outcome token, -1 otherwise.
+function saveToken(address: Address, role: string, proposal: Address | null, outcomeIndex: i32 = -1): void {
     let id = address.toHexString()
     let token = WhitelistedToken.load(id)
     if (!token) {
         token = new WhitelistedToken(id)
         token.role = role
         if (proposal) token.proposal = proposal.toHexString()
+        if (outcomeIndex >= 0) token.outcomeIndex = outcomeIndex
 
         // Attempt to fetch symbol, but don't break if fail
         // Using ERC20 binding from generic ABI if present or generic ERC20 interaction
@@ -112,12 +175,13 @@ function saveToken(address: Address, role: string, proposal: Address | null): vo
 
         token.save()
         log.info("Whitelisted Token: {} ({}) with Role: {}", [id, token.symbol!, role])
-    } else if (token.role != role && (role == ROLE_YES_COMPANY || role == ROLE_NO_COMPANY || role == ROLE_YES_CURRENCY || role == ROLE_NO_CURRENCY)) {
+    } else if (token.role != role && (isCompanyOutcome(role) || isCurrencyOutcome(role))) {
         // Upgrade role if needed (prefer specific OUTCOME over generic if conflict occurs)
         token.role = role
         // Also update proposal if missing? Maybe better not to overwrite if it exists (collision?)
         // Assuming Outcomes are unique, Collaterals are shared.
         if (proposal) token.proposal = proposal.toHexString()
+        if (outcomeIndex >= 0) token.outcomeIndex = outcomeIndex
         token.save()
     }
 }
@@ -172,9 +236,9 @@ export function handlePoolCreated(event: PoolCreated): void {
             pool.isInverted = true // Base/Quote -> Quote is T0 -> Inverted
 
             // Classification
-            if (r1 == ROLE_YES_COMPANY || r1 == ROLE_NO_COMPANY) {
+            if (isCompanyOutcome(r1)) {
                 pool.type = TYPE_EXPECTED_VALUE
-            } else if (r1 == ROLE_YES_CURRENCY || r1 == ROLE_NO_CURRENCY) {
+            } else if (isCurrencyOutcome(r1)) {
                 pool.type = TYPE_PREDICTION
             }
             pool.name = s1 + " / " + s0
@@ -182,9 +246,9 @@ export function handlePoolCreated(event: PoolCreated): void {
             pool.isInverted = false // Quote is T1 -> Normal
 
             // Classification
-            if (r0 == ROLE_YES_COMPANY || r0 == ROLE_NO_COMPANY) {
+            if (isCompanyOutcome(r0)) {
                 pool.type = TYPE_EXPECTED_VALUE
-            } else if (r0 == ROLE_YES_CURRENCY || r0 == ROLE_NO_CURRENCY) {
+            } else if (isCurrencyOutcome(r0)) {
                 pool.type = TYPE_PREDICTION
             }
             pool.name = s0 + " / " + s1
@@ -192,13 +256,13 @@ export function handlePoolCreated(event: PoolCreated): void {
 
         // RULE 2: Conditional Pools (Company vs Currency Outcome)
         // We want Price of Company (Base) in terms of Currency (Quote)
-        else if ((r0 == ROLE_YES_CURRENCY || r0 == ROLE_NO_CURRENCY) && (r1 == ROLE_YES_COMPANY || r1 == ROLE_NO_COMPANY)) {
+        else if (isCurrencyOutcome(r0) && isCompanyOutcome(r1) && sameOutcome(token0, token1)) {
             // T0 is Currency Outcome (Quote), T1 is Company Outcome (Base) -> Inverted
             pool.isInverted = true
             pool.type = TYPE_CONDITIONAL
             pool.name = s1 + " / " + s0
         }
-        else if ((r1 == ROLE_YES_CURRENCY || r1 == ROLE_NO_CURRENCY) && (r0 == ROLE_YES_COMPANY || r0 == ROLE_NO_COMPANY)) {
+        else if (isCurrencyOutcome(r1) && isCompanyOutcome(r0) && sameOutcome(token0, token1)) {
             // T1 is Currency Outcome (Quote), T0 is Base -> Normal
             pool.isInverted = false
             pool.type = TYPE_CONDITIONAL
@@ -234,6 +298,15 @@ export function handlePoolCreated(event: PoolCreated): void {
             pool.outcomeSide = "YES"
         } else if (r0 == ROLE_NO_COMPANY || r0 == ROLE_NO_CURRENCY || r1 == ROLE_NO_COMPANY || r1 == ROLE_NO_CURRENCY) {
             pool.outcomeSide = "NO"
+        }
+
+        // Categorical: the answer the pool trades (outcomeSide stays null)
+        if (pool.type != TYPE_UNKNOWN) {
+            if (isAnswer(token0)) {
+                pool.outcomeIndex = token0.outcomeIndex
+            } else if (isAnswer(token1)) {
+                pool.outcomeIndex = token1.outcomeIndex
+            }
         }
     }
     pool.save()

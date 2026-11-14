@@ -133,4 +133,38 @@ export class FutarchyProposal extends ethereum.SmartContract {
     let value = result.value;
     return ethereum.CallResult.fromValue(value[0].toString());
   }
+
+  numOutcomes(): BigInt {
+    let result = super.call("numOutcomes", "numOutcomes():(uint256)", []);
+
+    return result[0].toBigInt();
+  }
+
+  try_numOutcomes(): ethereum.CallResult<BigInt> {
+    let result = super.tryCall("numOutcomes", "numOutcomes():(uint256)", []);
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(value[0].toBigInt());
+  }
+
+  outcomes(param0: BigInt): string {
+    let result = super.call("outcomes", "outcomes(uint256):(string)", [
+      ethereum.Value.fromUnsignedBigInt(param0),
+    ]);
+
+    return result[0].toString();
+  }
+
+  try_outcomes(param0: BigInt): ethereum.CallResult<string> {
+    let result = super.tryCall("outcomes", "outcomes(uint256):(string)", [
+      ethereum.Value.fromUnsignedBigInt(param0),
+    ]);
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(value[0].toString());
+  }
 }

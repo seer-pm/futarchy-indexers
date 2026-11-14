@@ -4,6 +4,7 @@ type WhitelistedToken @entity {
   decimals: BigInt # Decimals fetched from contract
   role: String! # "BASE" or "QUOTE"
   proposal: Proposal # Address of the proposal that created this token
+  outcomeIndex: Int # Answer of a categorical proposal (role ANSWER_COMPANY / ANSWER_CURRENCY)
 }
 
 type Proposal @entity {
@@ -18,6 +19,11 @@ type Proposal @entity {
   
   # Stored array allows Many-to-Many (One token can be in multiple proposals)
   outcomeTokens: [WhitelistedToken!]!
+
+  # Answers of a categorical proposal (FutarchyCategoricalFactory) in slot
+  # order; null for a YES/NO proposal. Its INVALID tokens have no pools and
+  # are not indexed.
+  outcomes: [String!]
 }
 
 type Pool @entity {
@@ -36,7 +42,8 @@ type Pool @entity {
   # Metadata
   name: String!
   type: String! # "STANDARD", "CONDITIONAL", "PREDICTION"
-  outcomeSide: String # "YES", "NO"
+  outcomeSide: String # "YES", "NO"; null for a categorical proposal
+  outcomeIndex: Int # Answer of a categorical proposal the pool trades
 
   # Volume
   volumeToken0: BigDecimal!

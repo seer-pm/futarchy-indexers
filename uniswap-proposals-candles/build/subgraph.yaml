@@ -28,6 +28,31 @@ dataSources:
           handler: handleNewProposal
       file: FutarchyFactory/FutarchyFactory.wasm
   - kind: ethereum
+    name: FutarchyCategoricalFactory
+    network: mainnet
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: FutarchyFactory
+      startBlock: 23419000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - WhitelistedToken
+        - Proposal
+      abis:
+        - name: FutarchyFactory
+          file: FutarchyCategoricalFactory/FutarchyFactory.json
+        - name: FutarchyProposal
+          file: FutarchyCategoricalFactory/FutarchyProposal.json
+        - name: ERC20
+          file: FutarchyCategoricalFactory/ERC20.json
+      eventHandlers:
+        - event: NewProposal(indexed address,string,bytes32,bytes32)
+          handler: handleNewCategoricalProposal
+      file: FutarchyFactory/FutarchyFactory.wasm
+  - kind: ethereum
     name: UniswapV3Factory
     network: mainnet
     source:

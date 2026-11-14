@@ -117,6 +117,19 @@ export class WhitelistedToken extends Entity {
       this.set("proposal", Value.fromString(<string>value));
     }
   }
+
+  get outcomeIndex(): i32 {
+    let value = this.get("outcomeIndex");
+    if (!value || value.kind == ValueKind.NULL) {
+      return 0;
+    } else {
+      return value.toI32();
+    }
+  }
+
+  set outcomeIndex(value: i32) {
+    this.set("outcomeIndex", Value.fromI32(value));
+  }
 }
 
 export class Proposal extends Entity {
@@ -216,6 +229,23 @@ export class Proposal extends Entity {
 
   set outcomeTokens(value: Array<string>) {
     this.set("outcomeTokens", Value.fromStringArray(value));
+  }
+
+  get outcomes(): Array<string> | null {
+    let value = this.get("outcomes");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toStringArray();
+    }
+  }
+
+  set outcomes(value: Array<string> | null) {
+    if (!value) {
+      this.unset("outcomes");
+    } else {
+      this.set("outcomes", Value.fromStringArray(<Array<string>>value));
+    }
   }
 }
 
@@ -403,6 +433,19 @@ export class Pool extends Entity {
     } else {
       this.set("outcomeSide", Value.fromString(<string>value));
     }
+  }
+
+  get outcomeIndex(): i32 {
+    let value = this.get("outcomeIndex");
+    if (!value || value.kind == ValueKind.NULL) {
+      return 0;
+    } else {
+      return value.toI32();
+    }
+  }
+
+  set outcomeIndex(value: i32) {
+    this.set("outcomeIndex", Value.fromI32(value));
   }
 
   get volumeToken0(): BigDecimal {
