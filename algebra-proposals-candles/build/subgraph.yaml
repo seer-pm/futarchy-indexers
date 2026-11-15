@@ -1,4 +1,6 @@
 specVersion: 0.0.5
+features:
+  - grafting
 schema:
   file: schema.graphql
 dataSources:
@@ -31,9 +33,9 @@ dataSources:
     name: FutarchyCategoricalFactory
     network: gnosis
     source:
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0x1f24Ad0BEb1cD3e6C4026F6A749F96fa1B9E498c"
       abi: FutarchyFactory
-      startBlock: 40620030
+      startBlock: 49296905
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
