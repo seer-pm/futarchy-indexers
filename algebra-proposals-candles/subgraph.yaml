@@ -32,15 +32,15 @@ dataSources:
       file: ./src/mapping.ts
 
   # 1b. Futarchy Categorical Factory - N answers plus INVALID (seer-pm/demo
-  # contracts/src/FutarchyCategoricalFactory.sol). Same NewProposal event as
-  # FutarchyFactory.
+  # contracts/src/FutarchyCategoricalFactory.sol). Its NewProposal event adds
+  # parentMarket, as Seer's MarketFactory NewMarket does.
   # TODO: set the factory's address and deploy block once it is deployed.
   - kind: ethereum
     name: FutarchyCategoricalFactory
     network: gnosis
     source:
       address: "0x0000000000000000000000000000000000000000"
-      abi: FutarchyFactory
+      abi: FutarchyCategoricalFactory
       startBlock: 49296905
     mapping:
       kind: ethereum/events
@@ -50,14 +50,14 @@ dataSources:
         - WhitelistedToken
         - Proposal
       abis:
-        - name: FutarchyFactory
-          file: ./abis/FutarchyFactory.json
+        - name: FutarchyCategoricalFactory
+          file: ./abis/FutarchyCategoricalFactory.json
         - name: FutarchyProposal
           file: ./abis/FutarchyProposal.json
         - name: ERC20
           file: ./abis/ERC20.json
       eventHandlers:
-        - event: NewProposal(indexed address,string,bytes32,bytes32)
+        - event: NewProposal(indexed address,string,address,bytes32,bytes32)
           handler: handleNewCategoricalProposal
       file: ./src/mapping.ts
 

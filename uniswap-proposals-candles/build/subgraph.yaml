@@ -32,7 +32,7 @@ dataSources:
     network: mainnet
     source:
       address: "0x0000000000000000000000000000000000000000"
-      abi: FutarchyFactory
+      abi: FutarchyCategoricalFactory
       startBlock: 23419000
     mapping:
       kind: ethereum/events
@@ -42,14 +42,14 @@ dataSources:
         - WhitelistedToken
         - Proposal
       abis:
-        - name: FutarchyFactory
-          file: FutarchyCategoricalFactory/FutarchyFactory.json
+        - name: FutarchyCategoricalFactory
+          file: FutarchyCategoricalFactory/FutarchyCategoricalFactory.json
         - name: FutarchyProposal
           file: FutarchyCategoricalFactory/FutarchyProposal.json
         - name: ERC20
           file: FutarchyCategoricalFactory/ERC20.json
       eventHandlers:
-        - event: NewProposal(indexed address,string,bytes32,bytes32)
+        - event: NewProposal(indexed address,string,address,bytes32,bytes32)
           handler: handleNewCategoricalProposal
       file: FutarchyFactory/FutarchyFactory.wasm
   - kind: ethereum

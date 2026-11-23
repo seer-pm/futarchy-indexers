@@ -1,6 +1,6 @@
 import { BigInt, Address, BigDecimal, log } from "@graphprotocol/graph-ts"
 import { NewProposal } from "../generated/FutarchyFactory/FutarchyFactory"
-import { NewProposal as NewCategoricalProposal } from "../generated/FutarchyCategoricalFactory/FutarchyFactory"
+import { NewProposal as NewCategoricalProposal } from "../generated/FutarchyCategoricalFactory/FutarchyCategoricalFactory"
 import { Pool as PoolCreated } from "../generated/AlgebraFactory/AlgebraFactory"
 import {
     Swap as SwapEvent,
@@ -92,10 +92,10 @@ export function handleNewCategoricalProposal(event: NewCategoricalProposal): voi
     // A proposal that follows up an answer of another one. Its prediction
     // pools pair its answers' currency tokens with that answer's currency
     // token (see followsUp).
-    let parentMarket = proposal.try_parentMarket()
-    if (!parentMarket.reverted && parentMarket.value != Address.zero()) {
+    let parentMarket = event.params.parentMarket
+    if (parentMarket != Address.zero()) {
         let p = Proposal.load(proposalAddress.toHexString())!
-        p.parentMarket = parentMarket.value.toHexString()
+        p.parentMarket = parentMarket.toHexString()
         let parentOutcome = proposal.try_parentOutcome()
         if (!parentOutcome.reverted) p.parentOutcome = parentOutcome.value.toI32()
         p.save()
