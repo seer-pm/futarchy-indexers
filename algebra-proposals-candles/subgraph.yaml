@@ -34,14 +34,14 @@ dataSources:
   # 1b. Futarchy Categorical Factory - N answers plus INVALID (seer-pm/demo
   # contracts/src/FutarchyCategoricalFactory.sol). Its NewProposal event adds
   # parentMarket, as Seer's MarketFactory NewMarket does.
-  # TODO: set the factory's address and deploy block once it is deployed.
+  # Deployed at block 49432890 (seer-pm/demo contracts/deployments/gnosis).
   - kind: ethereum
     name: FutarchyCategoricalFactory
     network: gnosis
     source:
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0x4e79be3a63b09d22D4DAfcd66Feb00535A654295"
       abi: FutarchyCategoricalFactory
-      startBlock: 49296905
+      startBlock: 49432890
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
