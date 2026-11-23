@@ -34,39 +34,9 @@ dataSources:
   # 1b. Futarchy Categorical Factory - N answers plus INVALID (seer-pm/demo
   # contracts/src/FutarchyCategoricalFactory.sol). Same NewProposal event as
   # FutarchyFactory.
-  # Deployed at block 49296905 (seer-pm/demo contracts/deployments/gnosis).
-  - kind: ethereum
-    name: FutarchyCategoricalFactory
-    network: gnosis
-    source:
-      address: "0x1f24Ad0BEb1cD3e6C4026F6A749F96fa1B9E498c"
-      abi: FutarchyFactory
-      startBlock: 49296905
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - WhitelistedToken
-        - Proposal
-      abis:
-        - name: FutarchyFactory
-          file: ./abis/FutarchyFactory.json
-        - name: FutarchyProposal
-          file: ./abis/FutarchyProposal.json
-        - name: ERC20
-          file: ./abis/ERC20.json
-      eventHandlers:
-        - event: NewProposal(indexed address,string,bytes32,bytes32)
-          handler: handleNewCategoricalProposal
-      file: ./src/mapping.ts
-
-  # 1c. The categorical factory redeployed so a proposal can follow up an
-  # answer of another one (parentMarket / parentOutcome). Same handler as 1b;
-  # 1b stays so its proposals keep being indexed.
   # TODO: set the factory's address and deploy block once it is deployed.
   - kind: ethereum
-    name: FutarchyCategoricalFactoryV2
+    name: FutarchyCategoricalFactory
     network: gnosis
     source:
       address: "0x0000000000000000000000000000000000000000"
