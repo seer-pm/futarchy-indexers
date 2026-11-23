@@ -86,6 +86,18 @@ export function handleNewCategoricalProposal(event: NewCategoricalProposal): voi
     }
 
     saveProposal(proposal, proposalAddress, companyTokenIds.concat(currencyTokenIds), outcomes)
+
+    // A proposal that follows up an answer of another one. Its prediction
+    // pools pair its answers' currency tokens with that answer's currency
+    // token (see followsUp).
+    let parentMarket = proposal.try_parentMarket()
+    if (!parentMarket.reverted && parentMarket.value != Address.zero()) {
+        let p = Proposal.load(proposalAddress.toHexString())!
+        p.parentMarket = parentMarket.value.toHexString()
+        let parentOutcome = proposal.try_parentOutcome()
+        if (!parentOutcome.reverted) p.parentOutcome = parentOutcome.value.toI32()
+        p.save()
+    }
 }
 
 // Registers the collaterals and saves the Proposal entity.
@@ -144,6 +156,17 @@ function isAnswer(token: WhitelistedToken): boolean {
 function sameOutcome(a: WhitelistedToken, b: WhitelistedToken): boolean {
     if (!isAnswer(a) && !isAnswer(b)) return true
     return isAnswer(a) && isAnswer(b) && a.proposal == b.proposal && a.outcomeIndex == b.outcomeIndex
+}
+
+// Whether `child` is an answer's currency token of a proposal that follows up
+// the answer `parent` is the currency token of: their pool prices the child
+// answer's chance given the parent answer, like a prediction pool.
+function followsUp(child: WhitelistedToken, parent: WhitelistedToken): boolean {
+    if (child.role != ROLE_ANSWER_CURRENCY || parent.role != ROLE_ANSWER_CURRENCY) return false
+    if (!child.proposal || !parent.proposal) return false
+    let proposal = Proposal.load(child.proposal!)
+    if (!proposal || !proposal.parentMarket) return false
+    return proposal.parentMarket! == parent.proposal! && proposal.parentOutcome == parent.outcomeIndex
 }
 
 // outcomeIndex is the answer of a categorical proposal's outcome token, -1 otherwise.
@@ -221,6 +244,9 @@ export function handlePoolCreated(event: PoolCreated): void {
     // 2. If one is OUTCOME_2/3 (Yes/No Currency) and other is OUTCOME_0/1 (Yes/No Company), then Currency is Quote.
     // 3. Otherwise Default (keep as is) unless flagged inverted.
 
+    // The follow-up answer's token of a RULE 1b pool, null otherwise.
+    let followUp: WhitelistedToken | null = null
+
     if (token0 && token1) {
         let r0 = token0.role
         let r1 = token1.role
@@ -254,6 +280,22 @@ export function handlePoolCreated(event: PoolCreated): void {
             pool.name = s0 + " / " + s1
         }
 
+        // RULE 1b: a follow-up answer's currency token against the currency
+        // token of the answer it follows up is a prediction pool, quoted in
+        // the parent answer's token. It belongs to the follow-up proposal.
+        else if (followsUp(token0, token1)) {
+            pool.isInverted = false
+            pool.type = TYPE_PREDICTION
+            pool.name = s0 + " / " + s1
+            followUp = token0
+        }
+        else if (followsUp(token1, token0)) {
+            pool.isInverted = true
+            pool.type = TYPE_PREDICTION
+            pool.name = s1 + " / " + s0
+            followUp = token1
+        }
+
         // RULE 2: Conditional Pools (Company vs Currency Outcome)
         // We want Price of Company (Base) in terms of Currency (Quote)
         else if (isCurrencyOutcome(r0) && isCompanyOutcome(r1) && sameOutcome(token0, token1)) {
@@ -283,7 +325,9 @@ export function handlePoolCreated(event: PoolCreated): void {
     }
 
     // LINK POOL TO PROPOSAL
-    if (token0 && token0.proposal) {
+    if (followUp) {
+        pool.proposal = followUp.proposal!
+    } else if (token0 && token0.proposal) {
         pool.proposal = token0.proposal!
     } else if (token1 && token1.proposal) {
         pool.proposal = token1.proposal!
@@ -301,7 +345,9 @@ export function handlePoolCreated(event: PoolCreated): void {
         }
 
         // Categorical: the answer the pool trades (outcomeSide stays null)
-        if (pool.type != TYPE_UNKNOWN) {
+        if (followUp) {
+            pool.outcomeIndex = followUp.outcomeIndex
+        } else if (pool.type != TYPE_UNKNOWN) {
             if (isAnswer(token0)) {
                 pool.outcomeIndex = token0.outcomeIndex
             } else if (isAnswer(token1)) {

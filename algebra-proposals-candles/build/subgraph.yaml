@@ -55,6 +55,31 @@ dataSources:
           handler: handleNewCategoricalProposal
       file: FutarchyFactory/FutarchyFactory.wasm
   - kind: ethereum
+    name: FutarchyCategoricalFactoryV2
+    network: gnosis
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: FutarchyFactory
+      startBlock: 49296905
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - WhitelistedToken
+        - Proposal
+      abis:
+        - name: FutarchyFactory
+          file: FutarchyCategoricalFactoryV2/FutarchyFactory.json
+        - name: FutarchyProposal
+          file: FutarchyCategoricalFactoryV2/FutarchyProposal.json
+        - name: ERC20
+          file: FutarchyCategoricalFactoryV2/ERC20.json
+      eventHandlers:
+        - event: NewProposal(indexed address,string,bytes32,bytes32)
+          handler: handleNewCategoricalProposal
+      file: FutarchyFactory/FutarchyFactory.wasm
+  - kind: ethereum
     name: AlgebraFactory
     network: gnosis
     source:

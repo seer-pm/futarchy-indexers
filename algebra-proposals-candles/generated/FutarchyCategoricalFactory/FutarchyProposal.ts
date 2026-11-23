@@ -167,4 +167,38 @@ export class FutarchyProposal extends ethereum.SmartContract {
     let value = result.value;
     return ethereum.CallResult.fromValue(value[0].toString());
   }
+
+  parentMarket(): Address {
+    let result = super.call("parentMarket", "parentMarket():(address)", []);
+
+    return result[0].toAddress();
+  }
+
+  try_parentMarket(): ethereum.CallResult<Address> {
+    let result = super.tryCall("parentMarket", "parentMarket():(address)", []);
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(value[0].toAddress());
+  }
+
+  parentOutcome(): BigInt {
+    let result = super.call("parentOutcome", "parentOutcome():(uint256)", []);
+
+    return result[0].toBigInt();
+  }
+
+  try_parentOutcome(): ethereum.CallResult<BigInt> {
+    let result = super.tryCall(
+      "parentOutcome",
+      "parentOutcome():(uint256)",
+      [],
+    );
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(value[0].toBigInt());
+  }
 }

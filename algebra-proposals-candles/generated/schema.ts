@@ -247,6 +247,36 @@ export class Proposal extends Entity {
       this.set("outcomes", Value.fromStringArray(<Array<string>>value));
     }
   }
+
+  get parentMarket(): string | null {
+    let value = this.get("parentMarket");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toString();
+    }
+  }
+
+  set parentMarket(value: string | null) {
+    if (!value) {
+      this.unset("parentMarket");
+    } else {
+      this.set("parentMarket", Value.fromString(<string>value));
+    }
+  }
+
+  get parentOutcome(): i32 {
+    let value = this.get("parentOutcome");
+    if (!value || value.kind == ValueKind.NULL) {
+      return 0;
+    } else {
+      return value.toI32();
+    }
+  }
+
+  set parentOutcome(value: i32) {
+    this.set("parentOutcome", Value.fromI32(value));
+  }
 }
 
 export class Pool extends Entity {

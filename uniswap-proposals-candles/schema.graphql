@@ -24,6 +24,12 @@ type Proposal @entity {
   # order; null for a YES/NO proposal. Its INVALID tokens have no pools and
   # are not indexed.
   outcomes: [String!]
+
+  # A categorical proposal that follows up an answer of another one (such as
+  # its "Other"): its tokens are split from that answer's tokens. Null for a
+  # proposal on the collaterals.
+  parentMarket: Proposal
+  parentOutcome: Int
 }
 
 type Pool @entity {
